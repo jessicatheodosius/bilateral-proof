@@ -27,7 +27,7 @@ lemma aborted_star:
 lemma actions_of_one_step:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); action \<in> actions_of f' \<rbrakk> \<Longrightarrow> action \<in> actions_of f"
   apply (induction rule: small_step_induct; clarsimp)
-   apply (metis actions_of.simps(8) in_set_conv_nth length_list_update length_pos_if_in_set less_numeral_extra(3) list.set(1) list.size(3) nth_list_update_eq nth_list_update_neq)
+   apply (metis actions_of.simps(8) empty_iff in_set_conv_nth length_list_update nth_list_update_eq nth_list_update_neq nth_mem)
   using set_update_subset_insert by fastforce
 
 lemma invariant_all_reachable_sat':
@@ -37,6 +37,7 @@ lemma invariant_all_reachable_sat':
   apply (induction rule: star_induct, simp)
   by (metis star.refl star.step)
 
+(* i holds at any point in the execution *)
 lemma invariant_all_reachable_sat:
   "invariant i f s \<Longrightarrow> reachable_sat (\<lambda>f' s'. i s') f s"
   apply (clarsimp simp: invariant_def stable_def co_def reachable_sat_def)
@@ -78,7 +79,7 @@ lemma semi_sound':
   apply (unfold valid_spec_def reachable_sat_def)
    apply (subgoal_tac "m s'", simp+)
    apply (simp add: holds_def)
-   using has_terminated.simps(1) apply blast
+  using has_terminated.simps(1) apply blast
   by (clarsimp, metis curryD curryI star.step)
 
 lemma semi_sound[simp]: 
@@ -100,8 +101,8 @@ lemma if_sound[simp]:
 
 text \<open>
   @{text "exec c n c'"} returns true if c can reach c@{text "'"} by executing small 
-  step (@{text "\<rightarrow>"}) n times, and return false otherwise. This is useful to prove the soundness of while 
-  loop so that we can do induction on the number of steps.
+  step (@{text "\<rightarrow>"}) n times, and return false otherwise. This is useful to prove the soundness of
+  while loop so that we can do induction on the number of steps.
 \<close>
 primrec exec :: "(com * state) \<Rightarrow> nat \<Rightarrow> (com * state) \<Rightarrow> bool"  ("_ \<rightarrow>^_ _" [55, 1000, 55] 55)
   where
@@ -160,8 +161,7 @@ lemma action_skip_star:
   "\<lbrakk> (f, s) \<rightarrow>* (f', s'); f = \<lbrace>i and not b\<rbrace> ACTION {(x, y). x = y}; (not b) s; i s \<rbrakk> \<Longrightarrow> 
   f' \<noteq> ABORTED \<and> s = s'"
   apply (induction rule: star_induct; simp)
-  by (metis (no_types, lifting) ActionE action_skip_one_step com.distinct(1) 
-      com_pre.simps(3) done_star prod.inject)
+  by (metis (no_types, lifting) ActionE action_skip_one_step com.distinct(1) com_pre.simps(3) done_star prod.inject)
 
 lemma while_sounds'':
   "\<lbrakk> (f, s) \<rightarrow>^n (f', s'); f = \<lbrace>i\<rbrace> \<lbrace>local_b\<rbrace> WHILE b i DO c; i s; \<forall>s. (i and b) s \<longrightarrow> com_pre c s;
@@ -242,7 +242,7 @@ lemma is_ann_stable_one_step:
   apply (unfold is_ann_stable_def)
   by (blast dest: actions_of_one_step)
 
-lemma all_anns_postann:
+lemma all_anns_post_ann:
   "\<lbrakk> p \<in> all_anns_par (map all_anns (Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN])) Ts; i < length Ps;
   length Ps = length Ts \<rbrakk> \<Longrightarrow> 
   p \<in> all_anns_par (map all_anns Ps) Ts"
@@ -270,18 +270,20 @@ lemma all_anns_is_subset:
   p \<in> all_anns g"
   apply (induction arbitrary: p t rule: small_step_induct; clarsimp)
   using semi_elim apply blast
-  using all_anns_postann par_elim apply blast
+  using all_anns_post_ann par_elim apply blast
   apply (frule par_elim; simp; clarsimp)
   by (metis (mono_tags, lifting) Post_annE all_anns_one_step and_map_com_pre_Ps1)
 
+(* if g is stable in h and g makes a step to g', g' is also stable in h *)
 lemma is_com_stable_one_step1:
   "\<lbrakk> (g, s) \<rightarrow> (g', s'); is_com_stable g h; com_pre g s; \<turnstile> {com_pre g} g {t} \<rbrakk> \<Longrightarrow> 
   is_com_stable g' h"
   apply (clarsimp simp: is_com_stable_def all_anns_is_subset)
-  apply (case_tac "g' = DONE"; clarsimp?)
+  apply (case_tac "g' = DONE", clarsimp)
    apply (simp add: is_ann_stable_def true_def)
   by (simp add: all_anns_is_subset)
 
+(* if g is stable in h and h makes a step to h', g is also stable in h' *)
 lemma is_com_stable_one_step2:
   "\<lbrakk> (h, s) \<rightarrow> (h', s'); is_com_stable g h \<rbrakk> \<Longrightarrow> is_com_stable g h'"
   by (simp add: is_com_stable_def is_ann_stable_one_step)
@@ -293,13 +295,10 @@ lemma com_pre_all_anns_par:
   apply (induction Ps arbitrary: Ts; auto)
   apply (case_tac Ts; simp)
   apply (drule_tac x=list in meta_spec)
-  apply (drule meta_mp)
-   apply clarsimp+
-  apply (drule meta_mp)
-   apply clarsimp
-   apply auto[1]
-  by fastforce
+  apply (drule meta_mp; clarsimp)
+  by (drule meta_mp; fastforce)
 
+(* the local annotation of a component is in its set of annotations *)
 lemma com_pre_in_all_anns:
   "\<turnstile> {r} f {t} \<Longrightarrow> com_pre f \<in> all_anns f"
   apply (induction f arbitrary: r t; auto)
@@ -321,18 +320,13 @@ lemma com_pre_and_derivable_done_par:
   t s'"
   apply (frule par_elim; simp; clarsimp)
   apply (drule_tac x="Ts ! i" in meta_spec)
-  apply (drule meta_mp)
-   apply (simp add: and_map_com_pre_Ps1)
-  apply (subgoal_tac "And Ts s'")
-   apply simp
+  apply (drule meta_mp, simp add: and_map_com_pre_Ps1)
+  apply (subgoal_tac "And Ts s'"; simp?)
   apply (rule and_Ts; clarsimp)
-  apply (case_tac "iaa = i")
-   apply simp
-   apply fastforce
+  apply (case_tac "iaa = i", fastforce)
   apply (erule_tac x=iaa in allE; clarsimp)
   apply (frule and_map_com_pre_Ps1)
-  apply (erule_tac x=iaa in allE)+
-  apply clarsimp
+  apply (erule_tac x=iaa in allE; clarsimp)+
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   by (frule ann_stable_holds_one_step; simp)
 
@@ -346,7 +340,8 @@ lemma com_pre_and_derivable_done:
    apply (metis if_elim done_elim)
   by (metis com_pre_and_derivable_done_par)
 
-lemma done_postann_helper:
+(* the precondition of a parallel composition remains valid after making a step *)
+lemma par_done_pre_holds_one_step:
   "\<lbrakk> (Ps ! i, s) \<rightarrow> (DONE, s'); And (map com_pre Ps) s; i < length Ps; valid_ann Ps Ts;
   length Ps = length Ts; Ps' = Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN];
   \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN \<rbrakk> \<Longrightarrow>
@@ -368,21 +363,22 @@ lemma done_postann_helper:
     apply (simp add: and_map_com_pre_Ps1)+
   using and_map_com_pre_Ps1 ann_stable_holds_one_step com_pre.simps(8) by fastforce
 
-lemma done_postann_helper2:
+(* after the parallel composition makes a step, it is still derivable *)
+lemma par_done_derivable_one_step:
   "\<lbrakk> valid_ann Ps Ts; \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN; 
   \<forall>s. And Ts s \<longrightarrow> t s; Ps' = Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN]; length Ps = length Ts; length Ps > 0;
   j < length Ts; (not (=) j) i; (not (=) (Ps ! j)) (\<lbrace>Ts ! j\<rbrace> POSTANN) \<rbrakk> \<Longrightarrow> 
   \<turnstile> {com_pre (PARALLEL Ps' Ts)} PARALLEL Ps' Ts {And Ts}"
   apply (rule b_par; simp)
-    prefer 2
-    apply (metis nth_list_update nth_list_update_neq)
-  apply (clarsimp simp: valid_ann_def valid_ann'_def)
-  apply (rule conjI)
-   apply (metis actions_of.simps(8) empty_iff is_ann_stable_def nth_list_update nth_list_update_neq)
-   apply (case_tac "i = ia"; simp add: is_com_stable_def)
-   apply (metis actions_of.simps(8) empty_iff is_ann_stable_def is_com_stable_def nth_list_update_eq nth_list_update_neq)
+    apply (clarsimp simp: valid_ann_def valid_ann'_def)
+    apply (rule conjI)
+     apply (metis actions_of.simps(8) empty_iff is_ann_stable_def nth_list_update nth_list_update_neq)
+    apply (case_tac "i = ia"; simp add: is_com_stable_def)
+    apply (metis actions_of.simps(8) empty_iff is_ann_stable_def is_com_stable_def nth_list_update_eq nth_list_update_neq)
+   apply (metis nth_list_update nth_list_update_neq)
   by auto
 
+(* derivability is preserved *)
 lemma com_pre_one_step:
   "\<lbrakk> (c, s) \<rightarrow> (c', s'); com_pre c s; \<turnstile> {com_pre c} c {t} \<rbrakk> \<Longrightarrow> com_pre c' s'"
   apply (induction arbitrary: t rule: small_step_induct; clarsimp simp: true_def)
@@ -392,7 +388,7 @@ lemma com_pre_one_step:
       apply (simp add: if_elim)
      apply (simp add: while_elim)
     apply (simp add: while_elim)
-  using done_postann_helper par_elim apply auto[1]
+  using par_done_pre_holds_one_step par_elim apply auto[1]
   apply (frule par_elim; simp; clarsimp)
   apply (rule and_map_com_pre_Ps2; clarsimp)
   apply (case_tac "i = ib"; simp)
@@ -405,7 +401,7 @@ lemma com_pre_one_step:
    apply (metis and_map_com_pre_Ps1 ann_stable_holds_one_step com_pre.simps(8))
   by auto
 
-lemma not_done_helper:
+lemma par_not_done_pre_holds_one_step:
   "\<lbrakk> (Ps ! i, s) \<rightarrow> (c', s'); c' \<noteq> DONE; And (map com_pre Ps) s; i < length Ps; valid_ann Ps Ts;
   length Ps = length Ts; Ps' = Ps[i := c']; 
   \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN \<rbrakk> \<Longrightarrow>
@@ -413,20 +409,19 @@ lemma not_done_helper:
   apply (rule and_map_com_pre_Ps2)
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   apply (case_tac "i = ia"; simp)
-   defer
+   apply (erule_tac x=i in allE)+
+   apply simp
+   apply (erule disjE)
+    apply (simp add: and_map_com_pre_Ps1 com_pre_one_step)
+   apply clarsimp
+   apply (erule Post_annE; simp add: false_def)
+  using and_map_com_pre_Ps1 apply force
   apply (subgoal_tac "\<turnstile> {com_pre (Ps!ia)} Ps!ia {Ts!ia} \<or> Ps!ia = \<lbrace>Ts!ia\<rbrace> POSTANN")
-  apply (erule disjE)
-   apply (frule_tac r="com_pre (Ps!ia)" in com_pre_in_all_anns)
-     apply (simp add: and_map_com_pre_Ps1 ann_stable_holds_one_step is_com_stable_def)
-    apply (metis and_map_com_pre_Ps1 ann_stable_holds_one_step com_pre.simps(8))
-  apply auto[1]
-  apply (erule_tac x=i in allE)+
-  apply simp
-  apply (erule disjE)
-   apply (simp add: and_map_com_pre_Ps1 com_pre_one_step)
-  apply clarsimp
-  apply (erule Post_annE; simp add: false_def)
-  using and_map_com_pre_Ps1 by force
+   apply (erule disjE)
+    apply (frule_tac r="com_pre (Ps!ia)" in com_pre_in_all_anns)
+    apply (simp add: and_map_com_pre_Ps1 ann_stable_holds_one_step is_com_stable_def)
+   apply (metis and_map_com_pre_Ps1 ann_stable_holds_one_step com_pre.simps(8))
+  by auto
 
 lemma valid_ann_step:
   "\<lbrakk> (Ps!i, s) \<rightarrow> (c', s'); i < length Ps; valid_ann Ps Ts;
@@ -434,10 +429,9 @@ lemma valid_ann_step:
   valid_ann (Ps[i:=c']) Ts"
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   apply (case_tac "ia = i")
-   apply (simp add: is_com_stable_one_step1)
-  by (simp add: is_ann_stable_one_step is_com_stable_one_step2 nth_list_update)
+  by (simp add: is_ann_stable_one_step is_com_stable_one_step1 is_com_stable_one_step2 nth_list_update)+
 
-lemma not_done_helper1:
+lemma par_not_done_derivable_one_step:
   "\<lbrakk> i < length Ts; (Ps ! i, s) \<rightarrow> (c', s'); And (map com_pre Ps) s; 
   \<turnstile> {And (map com_pre Ps)} PARALLEL Ps Ts {t}; Ps' = Ps[i := c'];
   com_pre c' s'; \<turnstile> {com_pre c'} c' {Ts ! i} \<rbrakk> \<Longrightarrow>
@@ -460,24 +454,24 @@ lemma com_pre_and_derivable_one_step:
     apply (simp add: b_action while_elim)
    apply (frule par_elim; simp; clarsimp)
    apply (rule conjI)
-    apply (simp add: done_postann_helper)
-   apply (frule_tac Ps'="Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN]" in done_postann_helper2; simp?)
+    apply (simp add: par_done_pre_holds_one_step)
+   apply (frule_tac Ps'="Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN]" in par_done_derivable_one_step; simp?)
     apply auto[1]
    apply (blast intro: b_strengthen_weaken)
   apply (frule par_elim; simp; clarsimp)
   apply (rule conjI)
-   apply (simp add: not_done_helper)
+   apply (simp add: par_not_done_pre_holds_one_step)
   apply (drule_tac x="Ts!i" in meta_spec)
   apply (drule meta_mp)
    apply (simp add: and_map_com_pre_Ps1)
   apply (drule meta_mp)
   using and_map_com_pre_Ps1 apply fastforce
   apply clarsimp
-  apply (frule not_done_helper1; simp)
+  apply (frule par_not_done_derivable_one_step; simp)
   apply (frule par_elim; simp; clarsimp)
   by (blast intro: b_strengthen_weaken)
 
-lemma par_postann_valid_ann:
+lemma par_post_ann_valid_ann:
   "\<lbrakk> valid_ann Ps Ts; length Ps = length Ts; Ps' = Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN] \<rbrakk> \<Longrightarrow> 
   valid_ann Ps' Ts"
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
@@ -487,18 +481,7 @@ lemma par_postann_valid_ann:
    apply (simp add: is_com_stable_def is_ann_stable_def)
   by (case_tac "i = ia"; simp add: is_com_stable_def)
 
-lemma par_postann:
-  "\<lbrakk> \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN; 
-  valid_ann Ps Ts; And (map com_pre Ps) b; length Ps = length Ts;
-  Ps' = Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN]; i < length Ts; (Ps ! i, b) \<rightarrow> (DONE, s') \<rbrakk> \<Longrightarrow>
-  valid_ann Ps' Ts \<and> (And (map com_pre Ps') s') \<and> length Ps' = length Ts \<and>
-  (\<forall>i<length Ts. \<turnstile> {com_pre (Ps' ! i)} Ps' ! i {Ts ! i} \<or> Ps' ! i = \<lbrace>Ts ! i\<rbrace> POSTANN)"
-  apply auto
-    apply (simp add: par_postann_valid_ann)
-   apply (simp add: done_postann_helper)
-  by (metis nth_list_update)
-
-lemma parallel_composition_par_sound:
+lemma parallel_composition_Par_sound:
   "\<lbrakk> \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN; 
   valid_ann Ps Ts; And (map com_pre Ps) b; length Ps = length Ts;
   Ps' = Ps[i := c']; i < length Ts; (Ps ! i, b) \<rightarrow> (c', s'); c' \<noteq> DONE \<rbrakk> \<Longrightarrow>
@@ -506,7 +489,7 @@ lemma parallel_composition_par_sound:
   (\<forall>j<length Ts. \<turnstile> {com_pre (Ps' ! j)} Ps' ! j {Ts ! j} \<or> Ps' ! j = \<lbrace>Ts ! j\<rbrace> POSTANN)"
   apply auto
     apply (metis Post_annE and_map_com_pre_Ps1 valid_ann_step)
-   apply (simp add: not_done_helper)
+   apply (simp add: par_not_done_pre_holds_one_step)
   by (metis Post_annE and_map_com_pre_Ps1 com_pre_and_derivable_one_step nth_list_update)
 
 lemma parallel_composition_sound':
@@ -517,8 +500,8 @@ lemma parallel_composition_sound':
   apply (induction arbitrary: Ps Ts rule: star_induct; simp)
   apply (erule ParE; simp)
     apply (metis (no_types, lifting) ParA Post_annE b_par com.distinct(1) com_pre.simps(7) com_pre_and_derivable_done done_star length_greater_0_conv)
-   apply (simp add: done_postann_helper nth_list_update par_postann_valid_ann)
-  apply (frule parallel_composition_par_sound; simp)
+   apply (simp add: par_done_pre_holds_one_step nth_list_update par_post_ann_valid_ann)
+  apply (frule parallel_composition_Par_sound; simp)
   by blast
 
 lemma parallel_composition_sound[simp]:
@@ -563,12 +546,6 @@ lemma biloof_no_perpetual_sound[simp]:
 
 
 subsection \<open>CO\<close>
-
-lemma not_aborted_transitive:
-  "\<lbrakk> \<forall>f'. (\<exists>s'. (f, s) \<rightarrow>* (f', s')) \<longrightarrow> (not (=) f') ABORTED; 
-    (f, s) \<rightarrow>* (f', s'); (f', s') \<rightarrow> (f'', s'') \<rbrakk> 
-   \<Longrightarrow> (not (=) f'') ABORTED"
-  by (metis star_step1 star_trans)
 
 lemma actions_of_subset:
   "\<lbrakk> (f, s) \<rightarrow>* (f', s'); \<forall>a. a \<in> actions_of f \<longrightarrow> X a \<rbrakk> \<Longrightarrow> \<forall>a. a \<in> actions_of f' \<longrightarrow> X a"
@@ -652,17 +629,17 @@ lemma co_inheritance_parallel_sound[simp]:
 
 subsubsection \<open>Invariance Meta Rule\<close>
 
-lemma invariant_sound[simp]:
+lemma invariant_sound':
   "\<lbrakk> \<Turnstile> {r} f {Q | t}; (i CO i) \<in> Q; \<forall>s. r s \<longrightarrow> i s\<rbrakk> \<Longrightarrow> \<Turnstile> {r} f {Q \<union> {INVARIANT i} | t}"
   using valid_spec_def invariant_def stable_def by fastforce
 
-lemma co_invariant_sound[simp]:
+lemma invariant_sound[simp]:
   "\<lbrakk> \<Turnstile> {r} f {Q | t};
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a
   \<longrightarrow> (\<forall>s s'. (s, s') \<in> state_rel \<longrightarrow> (pre and i) s \<longrightarrow> i s'); \<forall>s. r s \<longrightarrow> i s \<rbrakk> \<Longrightarrow> 
   \<Turnstile> {r} f {Q \<union> {INVARIANT i} | t}"
   apply (frule_tac p=i and q=i in co_sound; simp)
-  apply (frule invariant_sound; simp?)
+  apply (frule invariant_sound'; simp?)
   by (simp add: Un_insert_right valid_spec_def)
 
 lemma invariant_pre_post_sound[simp]:
@@ -686,6 +663,7 @@ lemma invariant_co_sound[simp]:
    apply (meson star_step1 star_trans)
   by fastforce
 
+(* an additional proof but it does not exist in the rules as it is redundant *)
 lemma invariant_inheritance_semi[simp]:
   "\<lbrakk> \<turnstile> {r} c\<^sub>1 {com_pre c\<^sub>2}; \<tturnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; \<Turnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; 
   (INVARIANT i) \<in> Q; \<turnstile> {com_pre c\<^sub>2} c\<^sub>2 {t}; \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; 
@@ -695,11 +673,12 @@ lemma invariant_inheritance_semi[simp]:
   apply (frule_tac r=r in biloof_no_perpetual_sound)
   apply (frule_tac f=c\<^sub>1 in invariant_elim, simp)
   apply (frule_tac f=c\<^sub>2 in invariant_elim, simp)
-  by (frule_tac f="c\<^sub>1;;c\<^sub>2" in co_invariant_sound; simp)
+  by (frule_tac f="c\<^sub>1;;c\<^sub>2" in invariant_sound; simp)
 
 
 subsection \<open>TRANSIENT\<close>
 
+(* overapproximates the number of steps taken at most to reach an action *)
 fun num_same_state :: "com \<Rightarrow> nat" where
   "num_same_state DONE = 1"
 | "num_same_state ABORTED = 1"
@@ -734,8 +713,7 @@ lemma is_path_one_step:
   by (metis old.prod.exhaust)
 
 lemma derivable_one_step:
-  "\<lbrakk> (f, s) \<rightarrow> (f', s'); \<turnstile> {r} f {t}; r s \<rbrakk> \<Longrightarrow>
-  (\<exists>r' t'. \<turnstile> {r'} f' {t'} \<and> r' s') \<or> f' = DONE"
+  "\<lbrakk> (f, s) \<rightarrow> (f', s'); \<turnstile> {r} f {t}; r s \<rbrakk> \<Longrightarrow> (\<exists>r' t'. \<turnstile> {r'} f' {t'} \<and> r' s') \<or> f' = DONE"
   apply (case_tac "f' = DONE"; simp)
   apply (frule derivable_implies_com_pre)
   apply (drule derivable_implies_com_pre_derivable)
@@ -750,6 +728,7 @@ lemma derivable_star:
   apply (frule_tac r=r and t=t in derivable_one_step; simp)
   by (metis done_star)
 
+(* if f goes to DONE (and f is not DONE), then it must be an action, num_same_state = 0 *)
 lemma done_0_num_same_state:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); f' = DONE; \<turnstile> {r} f {t} \<rbrakk> \<Longrightarrow> num_same_state f = 0"
   apply (induction arbitrary: r t rule: small_step_induct; simp)
@@ -773,13 +752,14 @@ lemma num_same_state_one_component:
   apply (case_tac i; simp)
   using trans_less_add2 by blast
 
-lemma num_same_state_postann:
+lemma num_same_state_post_ann:
   "\<lbrakk> Suc 0 < num_same_state c; i < length Ps; Ps ! i = c \<rbrakk> \<Longrightarrow> 
   sum_list (map num_same_state (Ps[i := \<lbrace>Ts ! i\<rbrace> POSTANN])) < sum_list (map num_same_state Ps)"
   apply (induction Ps arbitrary: i c; simp)
   apply (case_tac i; simp)
   by (simp add: map_update)
 
+(* whenever a component makes a step, either num_same_state decreases or (not p) holds *)
 lemma num_same_state_decreases_or_not_p:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); \<turnstile> {r} f {t}; r s; p s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
@@ -842,6 +822,7 @@ lemma eventually_not_p_num_same_state':
    apply (meson is_path_0)
   by (simp add: done_0_num_same_state)
 
+(* added n > num_same_state f and apply induction on n *)
 lemma eventually_not_p_num_same_state:
   "\<lbrakk> n > num_same_state f; \<turnstile> {r} f {t}; r s; p s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
@@ -922,6 +903,12 @@ lemma semi_path_all_possible_cases':
   apply (induction rule: nat_less_induct; simp)
   by blast
 
+(* 
+  the path for sequential composition is either
+  - path i = (f';;c\<^sub>2, s) for all i -- c\<^sub>1 never terminates
+  - path i = (ABORTED;;c\<^sub>2, s) and path (Suc i) = (ABORTED, s) -- c\<^sub>1 goes to ABORTED
+  - path i = (f';;c\<^sub>2, s) and path (Suc i) = (c\<^sub>2, s') -- c\<^sub>2 goes to DONE
+*)
 lemma semi_path_all_possible_cases:
   "\<lbrakk> is_path path (c\<^sub>1;;c\<^sub>2) s; \<not> (\<forall>i. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<rbrakk> \<Longrightarrow>
   (\<exists>n s'. n > 0 \<and> (\<forall>i < n. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<and> path n = (ABORTED, s')) \<or>
@@ -1093,7 +1080,7 @@ lemma transient_inheritance_semi_sound[simp]:
    apply (clarsimp simp: valid_spec_def)
   by (rule_tac r=r and t=t and Q'=Q' in transient_inheritance_semi'; simp?)
 
-lemma transient_inheritance_if_sound'_1:
+lemma transient_inheritance_if_sound_if:
   "\<lbrakk> pre s; b s; com_pre c\<^sub>1 s; transient p c\<^sub>1 s \<rbrakk> \<Longrightarrow> 
   transient p (\<lbrace>pre\<rbrace> IF b THEN c\<^sub>1 ELSE c\<^sub>2) s"
   apply (clarsimp simp: transient_def paths_def)
@@ -1107,7 +1094,7 @@ lemma transient_inheritance_if_sound'_1:
   apply (erule_tac x=0 in allE; simp)
   by (erule IfE; simp)
 
-lemma transient_inheritance_if_sound'_2:
+lemma transient_inheritance_if_sound_else:
   "\<lbrakk> pre s; \<not> b s; com_pre c\<^sub>2 s; transient p c\<^sub>2 s \<rbrakk> \<Longrightarrow> 
   transient p (\<lbrace>pre\<rbrace> IF b THEN c\<^sub>1 ELSE c\<^sub>2) s"
   apply (clarsimp simp: transient_def paths_def)
@@ -1133,9 +1120,9 @@ lemma transient_inheritance_if_sound[simp]:
    apply (frule_tac r=pre in biloof_no_perpetual_sound)
    apply (clarsimp simp: valid_spec_def)
   apply (case_tac "b s")
-   apply (frule_tac c\<^sub>1=c\<^sub>1 and b=b and pre=pre in transient_inheritance_if_sound'_1; simp?)
+   apply (frule_tac c\<^sub>1=c\<^sub>1 and b=b and pre=pre in transient_inheritance_if_sound_if; simp?)
   using valid_spec_def apply fastforce
-  apply (frule_tac c\<^sub>2=c\<^sub>2 and b=b and pre=pre in transient_inheritance_if_sound'_2; simp?)
+  apply (frule_tac c\<^sub>2=c\<^sub>2 and b=b and pre=pre in transient_inheritance_if_sound_else; simp?)
   using valid_spec_def by fastforce
 
 
@@ -1262,7 +1249,6 @@ subsection \<open>Soundness of Everything\<close>
 
 lemma biloof_sound:
   "\<tturnstile> {r} f {Q | t} \<Longrightarrow> \<Turnstile> {r} f {Q | t}"
-  by (induction rule: biloof.induct; clarsimp?)
-
+  by (induction rule: biloof.induct; clarsimp)
  
 end
