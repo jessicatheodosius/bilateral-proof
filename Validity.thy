@@ -16,7 +16,7 @@ datatype perpetual =
   | Constant vname      ("CONSTANT _" [21] 20)
   | Invariant ann       ("INVARIANT _" [21] 20)
   | Transient ann       ("TRANSIENT _" [21] 20)
-  | Sure ann ann        ("_ EN _" [20, 21] 20)
+  | Ensure ann ann      ("_ EN _" [20, 21] 20)
   | Leads_to ann ann    ("_ \<mapsto> _" [20, 21] 20)
 
 text \<open>

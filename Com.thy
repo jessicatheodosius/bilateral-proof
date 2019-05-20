@@ -58,13 +58,13 @@ text \<open>
 
   \<^item> @{text "Parallel"} is the parallel composition which takes in a list of @{text "com"}
   rather than limiting it to two components. It also takes in a list of postconditions
-  (@{text "ann list"}). Although this list might not be necessary, having this list
-  simplifies the soundness proof of parallel composition.
+  (@{text "ann list"}) to simplify the soundness proof of parallel composition.
 
-  \<^item> @{text "Post_ann"} is used to help prove the soundness of parallel composition.
+  \<^item> @{term Post_ann} is used to help prove the soundness of parallel composition.
   Every time a component running in parallel terminates, it will be substituted with
-  a @{text "Post_ann"}. @{text "Post_ann"} keeps the postcondition of the component as its local
-  annotation. Ideally, we should not write a program that has a @{text "Post_ann"} in it.
+  a @{term Post_ann} with local annotation the same as the postcondition of the
+  terminated component. @{term Post_ann} is intended only to help prove the soundness of
+  parallel composition, no program should naturally contain a @{term Post_ann}.
 \<close>
 
 

@@ -232,11 +232,7 @@ lemma and_map_com_pre_Ps2:
   apply (induction Ps, simp add: true_def)
   by fastforce
 
-lemma and_Ts1:
-  "And Ts s \<Longrightarrow> \<forall>i<length Ts. (Ts!i) s"
-  by (induction Ts; simp add: nth_Cons')
-
-lemma and_Ts2:
+lemma and_Ts:
   "\<forall>i<length Ts. (Ts!i) s \<Longrightarrow> And Ts s"
   apply (induction Ts, simp add: true_def)
   by fastforce
@@ -274,10 +270,9 @@ lemma all_anns_is_subset:
   p \<in> all_anns g"
   apply (induction arbitrary: p t rule: small_step_induct; clarsimp)
   using semi_elim apply blast
-   defer
+  using all_anns_postann par_elim apply blast
   apply (frule par_elim; simp; clarsimp)
-   apply (metis (mono_tags, lifting) Post_annE all_anns_one_step and_map_com_pre_Ps1)
-  using all_anns_postann par_elim by blast
+  by (metis (mono_tags, lifting) Post_annE all_anns_one_step and_map_com_pre_Ps1)
 
 lemma is_com_stable_one_step1:
   "\<lbrakk> (g, s) \<rightarrow> (g', s'); is_com_stable g h; com_pre g s; \<turnstile> {com_pre g} g {t} \<rbrakk> \<Longrightarrow> 
@@ -330,7 +325,7 @@ lemma com_pre_and_derivable_done_par:
    apply (simp add: and_map_com_pre_Ps1)
   apply (subgoal_tac "And Ts s'")
    apply simp
-  apply (rule and_Ts2; clarsimp)
+  apply (rule and_Ts; clarsimp)
   apply (case_tac "iaa = i")
    apply simp
    apply fastforce
@@ -358,10 +353,8 @@ lemma done_postann_helper:
   And (map com_pre Ps') s'"
   apply (rule and_map_com_pre_Ps2)
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
-  apply (case_tac "i = ia")
-   apply simp
-   apply (erule_tac x=ia in allE)+
-   apply clarsimp
+  apply (case_tac "i = ia"; simp)
+   apply (erule_tac x=ia in allE; simp)+
    apply (erule disjE)
     apply (frule_tac t = "Ts!i" in com_pre_and_derivable_done)
        apply (simp add: and_map_com_pre_Ps1)+
@@ -372,9 +365,7 @@ lemma done_postann_helper:
   apply (erule disjE)
    apply (frule_tac f="Ps!i" and p="com_pre (Ps!ia)" in ann_stable_holds_one_step)
   using com_pre_in_all_anns is_com_stable_def apply blast
-    apply (simp add: and_map_com_pre_Ps1)
-   apply simp
-  apply simp
+    apply (simp add: and_map_com_pre_Ps1)+
   using and_map_com_pre_Ps1 ann_stable_holds_one_step com_pre.simps(8) by fastforce
 
 lemma done_postann_helper2:
@@ -383,7 +374,7 @@ lemma done_postann_helper2:
   j < length Ts; (not (=) j) i; (not (=) (Ps ! j)) (\<lbrace>Ts ! j\<rbrace> POSTANN) \<rbrakk> \<Longrightarrow> 
   \<turnstile> {com_pre (PARALLEL Ps' Ts)} PARALLEL Ps' Ts {And Ts}"
   apply (rule b_par; simp)
-  prefer 2
+    prefer 2
     apply (metis nth_list_update nth_list_update_neq)
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   apply (rule conjI)
@@ -396,7 +387,7 @@ lemma com_pre_one_step:
   "\<lbrakk> (c, s) \<rightarrow> (c', s'); com_pre c s; \<turnstile> {com_pre c} c {t} \<rbrakk> \<Longrightarrow> com_pre c' s'"
   apply (induction arbitrary: t rule: small_step_induct; clarsimp simp: true_def)
          apply (simp add: com_pre_and_derivable_done semi_elim)
-  using semi_elim apply blast
+        apply (blast dest: semi_elim)
        apply (simp add: if_elim)
       apply (simp add: if_elim)
      apply (simp add: while_elim)
@@ -491,17 +482,10 @@ lemma par_postann_valid_ann:
   valid_ann Ps' Ts"
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   apply (rule conjI)
-   apply (case_tac "i = j")
-    apply (clarsimp simp: is_ann_stable_def)
-   apply clarsimp
-  apply (case_tac "i = j")
-   apply clarsimp
-   apply (clarsimp simp: is_com_stable_def is_ann_stable_def)
-  apply clarsimp
-  apply (case_tac "i = ia")
-   apply (simp add: is_com_stable_def)
-  apply clarsimp
-  done
+   apply (case_tac "i = j"; simp add: is_ann_stable_def)
+  apply (case_tac "i = j"; simp)
+   apply (simp add: is_com_stable_def is_ann_stable_def)
+  by (case_tac "i = ia"; simp add: is_com_stable_def)
 
 lemma par_postann:
   "\<lbrakk> \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN; 
@@ -572,13 +556,11 @@ lemma disjunction_sound_empty[simp]:
 
 subsection \<open>Soundness of @{term biloof_no_perpetual_sound}\<close>
 
-lemma biloof_no_perpetual_sound'[simp]:
+lemma biloof_no_perpetual_sound[simp]:
   "\<turnstile> {r} f {t} \<Longrightarrow> \<Turnstile> {r} f {{} | t}"
   apply (induction rule: biloof_no_perpetual.induct; clarsimp?)
-  apply (metis length_greater_0_conv parallel_composition_sound)
-  done
+  by (metis length_greater_0_conv parallel_composition_sound)
 
-lemma biloof_no_perpetual_sound[simp]: "\<turnstile> {r} f {t} \<longrightarrow> \<Turnstile> {r} f {{} | t}" by clarsimp
 
 subsection \<open>CO\<close>
 
@@ -601,13 +583,6 @@ lemma co_sound':
   apply (induct rule: small_step_induct; simp)
   by fastforce+
 
-(* 
-  co rule page 7: \<lbrakk> {r} f {s}; \<forall>actions. {pre \<and> b \<and> p} \<alpha> {q} \<rbrakk> \<Longrightarrow> {r} f {p CO q | s}
-  
-  We enforce p s \<longrightarrow> q s just because our program allows for a "skip", hence the state does not
-  change, so it should be "reflective" or whatever it's called.
-*)
-
 lemma co_sound[simp]:
   "\<lbrakk> \<Turnstile> {r} f {Q | t}; \<forall>s. p s \<longrightarrow> q s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a
@@ -629,7 +604,7 @@ lemma co_inheritance_semi_sound[simp]:
   \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; \<Turnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; (p CO q) \<in> Q' \<rbrakk> \<Longrightarrow> 
   \<Turnstile> {r} c\<^sub>1;;c\<^sub>2 {{p CO q} | t}"
   apply (drule b_semi; simp?)
-  apply (frule_tac r=r in biloof_no_perpetual_sound')
+  apply (frule_tac r=r in biloof_no_perpetual_sound)
   apply (frule_tac f=c\<^sub>1 in co_elim, simp)
   apply (frule_tac f=c\<^sub>2 in co_elim, simp)
   by (frule co_sound; simp)
@@ -641,7 +616,7 @@ lemma co_inheritance_if_sound[simp]:
   \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q'| t}; \<Turnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q'| t}; (p CO q) \<in> Q' \<rbrakk> \<Longrightarrow>
   \<Turnstile> {pre} \<lbrace>pre\<rbrace> IF b THEN c\<^sub>1 ELSE c\<^sub>2 {{p CO q} | t}"
   apply (frule_tac b_if, simp+)
-  apply (frule_tac r=pre in biloof_no_perpetual_sound')
+  apply (frule_tac r=pre in biloof_no_perpetual_sound)
   apply (frule_tac f=c\<^sub>1 in co_elim, simp)
   apply (frule_tac f=c\<^sub>2 in co_elim, simp)
   by (frule co_sound; simp)
@@ -653,7 +628,7 @@ lemma co_inheritance_while_sound[simp]:
   \<forall>s. (not b) s \<longrightarrow> (not local_b) s; \<forall>s. (i and not local_b) s \<longrightarrow> t s \<rbrakk> \<Longrightarrow>
   \<Turnstile> {pre} \<lbrace>pre\<rbrace> \<lbrace>local_b\<rbrace> WHILE b i DO c {{p CO q} | t}"
   apply (frule_tac b_while, simp+)
-  apply (frule_tac r=pre in biloof_no_perpetual_sound')
+  apply (frule_tac r=pre in biloof_no_perpetual_sound)
   apply (frule_tac f=c in co_elim, simp)
   by (frule co_sound; simp)
 
@@ -667,7 +642,7 @@ lemma co_inheritance_parallel_sound[simp]:
   apply (frule b_par; simp)
    apply (erule_tac x=0 in allE; clarsimp)
   using post_ann_elim apply fastforce
-  apply (frule biloof_no_perpetual_sound')
+  apply (frule biloof_no_perpetual_sound)
   apply (frule co_sound; simp; clarsimp)
    apply (erule_tac x=0 in allE; clarsimp)+
    apply (frule co_elim; simp; blast)
@@ -699,14 +674,6 @@ lemma invariant_pre_post_sound[simp]:
    apply (clarsimp simp: reachable_sat_def holds_def)
   by fastforce
 
-(*
-  From Misra's paper -- A Logic for Concurrent Programming: Safety (1995)
-
-  The substitution axiom allows us to deduce properties that we cannot deduce directly from
-  the definition of co. It states: An invariant may be replaced by true, and vice versa, in any 
-  property of a program. For instance, given that p co q and that J invariant, we can conclude
-  p \<and> J co q ; p co q \<and> J ; p \<and> J co q \<and> J ; p \<or> \<not> J co q \<and> J ; etc.
-*)
 lemma invariant_co_sound[simp]:
   "\<lbrakk> \<Turnstile> {r} f {Q | t}; (p CO q) \<in> Q; (INVARIANT i) \<in> Q \<rbrakk> \<Longrightarrow> \<Turnstile> {r} f {Q \<union> {p and i CO q and i} | t}"
   apply (clarsimp simp: valid_spec_def)
@@ -725,7 +692,7 @@ lemma invariant_inheritance_semi[simp]:
   \<Turnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; (INVARIANT i) \<in> Q' \<rbrakk> \<Longrightarrow> 
   \<Turnstile> {r} c\<^sub>1;;c\<^sub>2 {{INVARIANT i} | t}"
   apply (drule b_semi; simp?)
-  apply (frule_tac r=r in biloof_no_perpetual_sound')
+  apply (frule_tac r=r in biloof_no_perpetual_sound)
   apply (frule_tac f=c\<^sub>1 in invariant_elim, simp)
   apply (frule_tac f=c\<^sub>2 in invariant_elim, simp)
   by (frule_tac f="c\<^sub>1;;c\<^sub>2" in co_invariant_sound; simp)
@@ -813,7 +780,6 @@ lemma num_same_state_postann:
   apply (case_tac i; simp)
   by (simp add: map_update)
 
-(* TODO: clean this *)
 lemma num_same_state_decreases_or_not_p:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); \<turnstile> {r} f {t}; r s; p s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
@@ -826,51 +792,21 @@ lemma num_same_state_decreases_or_not_p:
        apply blast
       apply (metis done_0_num_same_state not_less_zero semi_elim)
      apply (meson semi_elim)
-    apply (subgoal_tac "Suc 0 < num_same_state c \<or> (not p) s'")
-     apply simp
-     apply (erule disjE; simp?)
-  using num_same_state_one_component apply auto[1]
-    apply (frule par_elim; simp)
-    apply (erule conjE)+
-    apply (drule_tac x="com_pre (Ps ! i)" in meta_spec)
-    apply (drule_tac x="Ts ! i" in meta_spec)
+    apply (drule_tac x="com_pre (Ps ! i)" in meta_spec; drule_tac x="Ts ! i" in meta_spec)
     apply (drule meta_mp)
+     apply (frule par_elim; simp)
      apply fastforce
-    apply (drule meta_mp)
-  using and_map_com_pre_Ps1 apply auto[1]
-    apply (drule meta_mp)
-     apply (meson in_set_conv_nth)
-    apply simp
-   apply (subgoal_tac "Suc 0 < num_same_state c \<or> (not p) s'")
-    apply simp
-  apply (erule disjE; simp?)
-  using num_same_state_postann apply auto[1]
-    apply (frule par_elim; simp)
-    apply (erule conjE)+
-    apply (drule_tac x="com_pre (Ps ! i)" in meta_spec)
-    apply (drule_tac x="Ts ! i" in meta_spec)
-    apply (drule meta_mp)
-     apply fastforce
+    apply (metis Suc_lessD Suc_lessI and_map_com_pre_Ps1 in_set_conv_nth num_same_state.simps(7) num_same_state_one_component)
+   apply (drule_tac x="com_pre (Ps ! i)" in meta_spec; drule_tac x="Ts ! i" in meta_spec)
    apply (drule meta_mp)
-  using and_map_com_pre_Ps1 apply auto[1]
-    apply (drule meta_mp)
-     apply (meson in_set_conv_nth)
-   apply simp
-  apply (subgoal_tac "num_same_state c' < num_same_state c \<or> (not p) s'")
-   apply (erule disjE; simp?)
-  using num_same_state_parallel_one_step apply auto[1]
     apply (frule par_elim; simp)
-    apply (erule conjE)+
-    apply (drule_tac x="com_pre (Ps ! i)" in meta_spec)
-    apply (drule_tac x="Ts ! i" in meta_spec)
-    apply (drule meta_mp)
-   apply (metis Post_annE and_Ts1 length_map nth_map)
+    apply fastforce
+   apply (metis Suc_lessD and_map_com_pre_Ps1 in_set_conv_nth num_same_state.simps(7) num_same_state.simps(8) num_same_state_parallel_one_step)
+  apply (drule_tac x="com_pre (Ps ! i)" in meta_spec; drule_tac x="Ts ! i" in meta_spec)
   apply (drule meta_mp)
-  using and_map_com_pre_Ps1 apply auto[1]
-  apply (drule meta_mp)
-     apply (meson in_set_conv_nth)
-  apply simp
-  done
+   apply (frule par_elim; simp)
+   apply (metis Post_annE and_map_com_pre_Ps1 com_pre.simps(8))
+  using and_map_com_pre_Ps1 num_same_state_parallel_one_step by fastforce
 
 lemma eventually_not_p_num_same_state':
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); 
@@ -1084,7 +1020,7 @@ lemma always_terminate_path:
    apply blast
   apply (case_tac "\<exists>n s'. n > 0 \<and> (\<forall>i < n. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<and> path n = (c\<^sub>2, s')")
    apply simp
-  by (metis (mono_tags, hide_lams) biloof_no_perpetual_sound' paths_won't_aborted semi_path_all_possible_cases)
+  by (metis (mono_tags, hide_lams) biloof_no_perpetual_sound paths_won't_aborted semi_path_all_possible_cases)
 
 lemma terminated_case':
   "\<lbrakk> \<Turnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; c\<^sub>2 \<noteq> DONE; (TRANSIENT p) \<in> Q'; 
@@ -1126,7 +1062,7 @@ lemma transient_sequencing_sound[simp]:
   apply (drule b_semi; simp?)
   apply (simp (no_asm) add: valid_spec_def; clarsimp)
   apply (rule conjI)
-   apply (frule_tac r=r in biloof_no_perpetual_sound')
+   apply (frule_tac r=r in biloof_no_perpetual_sound)
    apply (clarsimp simp: valid_spec_def)
   apply (simp (no_asm) add: transient_def paths_def; clarsimp)
   apply (frule always_terminate_path; simp add: paths_def)
@@ -1143,7 +1079,7 @@ lemma transient_inheritance_semi':
   using never_terminated_case apply blast
    apply (case_tac "\<exists>n s'. n > 0 \<and> (\<forall>i < n. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<and> path n = (c\<^sub>2, s')")
     apply (frule_tac Q'=Q' in terminated_case; simp)
-   apply (metis (mono_tags, hide_lams) biloof_no_perpetual_sound' paths_won't_aborted semi_path_all_possible_cases)
+   apply (metis (mono_tags, hide_lams) biloof_no_perpetual_sound paths_won't_aborted semi_path_all_possible_cases)
   using valid_spec_def by fastforce
 
 lemma transient_inheritance_semi_sound[simp]:
@@ -1153,7 +1089,7 @@ lemma transient_inheritance_semi_sound[simp]:
   apply (drule b_semi; simp?)
   apply (simp (no_asm) add: valid_spec_def; clarsimp)
   apply (rule conjI)
-   apply (frule_tac r=r in biloof_no_perpetual_sound')
+   apply (frule_tac r=r in biloof_no_perpetual_sound)
    apply (clarsimp simp: valid_spec_def)
   by (rule_tac r=r and t=t and Q'=Q' in transient_inheritance_semi'; simp?)
 
@@ -1194,7 +1130,7 @@ lemma transient_inheritance_if_sound[simp]:
   apply (frule_tac c\<^sub>2=c\<^sub>2 in b_if; simp?)
   apply (simp (no_asm) add: valid_spec_def; clarsimp)
   apply (rule conjI)
-   apply (frule_tac r=pre in biloof_no_perpetual_sound')
+   apply (frule_tac r=pre in biloof_no_perpetual_sound)
    apply (clarsimp simp: valid_spec_def)
   apply (case_tac "b s")
    apply (frule_tac c\<^sub>1=c\<^sub>1 and b=b and pre=pre in transient_inheritance_if_sound'_1; simp?)
@@ -1324,14 +1260,9 @@ lemma leads_to_disjunction_sound[simp]:
 
 subsection \<open>Soundness of Everything\<close>
 
-lemma biloof_sound'[simp]:
+lemma biloof_sound:
   "\<tturnstile> {r} f {Q | t} \<Longrightarrow> \<Turnstile> {r} f {Q | t}"
-  apply (induction rule: biloof.induct; clarsimp?)
-  done
+  by (induction rule: biloof.induct; clarsimp?)
 
-lemma biloof_sound[simp]:
-  "\<tturnstile> {r} f {Q | t} \<longrightarrow> \<Turnstile> {r} f {Q | t}"
-  apply clarsimp
-  done
  
 end
