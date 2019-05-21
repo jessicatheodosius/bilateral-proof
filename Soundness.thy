@@ -788,7 +788,7 @@ lemma num_same_state_decreases_or_not_p:
    apply (metis Post_annE and_map_com_pre_Ps1 com_pre.simps(8))
   using and_map_com_pre_Ps1 num_same_state_parallel_one_step by fastforce
 
-lemma eventually_not_p_num_same_state':
+lemma eventually_not_p_num_same_state'':
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); 
   \<And>f r t s.
     \<lbrakk> num_same_state f < n; \<turnstile> {r} f {t}; r s;
@@ -822,8 +822,7 @@ lemma eventually_not_p_num_same_state':
    apply (meson is_path_0)
   by (simp add: done_0_num_same_state)
 
-(* added n > num_same_state f and apply induction on n *)
-lemma eventually_not_p_num_same_state:
+lemma eventually_not_p_num_same_state':
   "\<lbrakk> n > num_same_state f; \<turnstile> {r} f {t}; r s; p s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
   (\<forall>s. (pre and p) s \<longrightarrow> (\<exists>s'. (s, s') \<in> state_rel)) \<and> 
@@ -831,15 +830,25 @@ lemma eventually_not_p_num_same_state:
   \<forall>path. is_path path f s \<longrightarrow> (\<exists>i f'' s''. path i = (f'', s'') \<and> (not p) s'')"
   apply (induction n arbitrary: f r t s; simp; clarsimp)
   apply (subgoal_tac "\<exists>f' s'. path 1 = (f', s') \<and> (f, s) \<rightarrow> (f', s')"; clarsimp)
-  apply (frule_tac r=r and t=t in eventually_not_p_num_same_state')
+  apply (frule_tac r=r and t=t in eventually_not_p_num_same_state'')
   using is_path_one_step by auto
+
+(* added n > num_same_state f and apply induction on n *)
+lemma eventually_not_p_num_same_state:
+  "\<lbrakk> n > num_same_state f; \<turnstile> {r} f {t}; r s; p s;
+  \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
+  (\<forall>s. (pre and p) s \<longrightarrow> (\<exists>s'. (s, s') \<in> state_rel)) \<and> 
+  (\<forall>s s'. (s, s') \<in> state_rel \<longrightarrow> (pre and p) s \<longrightarrow> (not p) s'); is_path path f s \<rbrakk> \<Longrightarrow>
+  \<exists>i f'' s''. path i = (f'', s'') \<and> (not p) s''"
+  by (simp add: eventually_not_p_num_same_state')
 
 lemma eventually_not_p:
   "\<lbrakk> \<turnstile> {r} f {t}; r s; p s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a \<longrightarrow>
   (\<forall>s. (pre and p) s \<longrightarrow> (\<exists>s'. (s, s') \<in> state_rel)) \<and> 
-  (\<forall>s s'. (s, s') \<in> state_rel \<longrightarrow> (pre and p) s \<longrightarrow> (not p) s') \<rbrakk> \<Longrightarrow>
-  \<forall>path. is_path path f s \<longrightarrow> (\<exists>i f'' s''. path i = (f'', s'') \<and> (not p) s'')"
+  (\<forall>s s'. (s, s') \<in> state_rel \<longrightarrow> (pre and p) s \<longrightarrow> (not p) s');
+  is_path path f s \<rbrakk> \<Longrightarrow>
+  \<exists>i f'' s''. path i = (f'', s'') \<and> (not p) s''"
   apply (subgoal_tac "\<exists>n. n > num_same_state f"; clarsimp)
    apply (frule_tac r=r and t=t in eventually_not_p_num_same_state; simp?)
   by auto
