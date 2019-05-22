@@ -20,7 +20,7 @@ text \<open>Retrieve all annotations in a component\<close>
 fun all_anns :: "com \<Rightarrow> ann set" where
   "all_anns DONE = {true}"
 | "all_anns ABORTED = {false}"
-|  "all_anns (\<lbrace>pre\<rbrace> ACTION _) = {pre}"
+| "all_anns (\<lbrace>pre\<rbrace> ACTION _) = {pre}"
 | "all_anns (c1;;c2) = all_anns c1 \<union> all_anns c2"
 | "all_anns (\<lbrace>pre\<rbrace> IF b THEN c1 ELSE c2) = {pre} \<union> all_anns c1 \<union> all_anns c2"
 | "all_anns (\<lbrace>pre\<rbrace> \<lbrace>local_b\<rbrace> WHILE b i DO c) = 

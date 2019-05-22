@@ -62,9 +62,9 @@ text \<open>
 
   \<^item> @{term Post_ann} is used to help prove the soundness of parallel composition.
   Every time a component running in parallel terminates, it will be substituted with
-  a @{term Post_ann} with local annotation the same as the postcondition of the
-  terminated component. @{term Post_ann} is intended only to help prove the soundness of
-  parallel composition, no program should naturally contain a @{term Post_ann}.
+  a @{term Post_ann}, with the annotation being the same as the terminated component's postcondition. 
+  As @{term Post_ann} is intended only to help prove the soundness of
+  parallel composition, no program should be written using a @{term Post_ann}.
 \<close>
 
 

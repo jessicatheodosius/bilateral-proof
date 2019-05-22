@@ -126,7 +126,7 @@ subsubsection \<open>Syntax to Semantics\<close>
 primrec eval :: "perpetual \<Rightarrow> com \<Rightarrow> state \<Rightarrow> bool" where
   "eval (p CO q) = co p q"
 | "eval (STABLE p) = stable p"
-| "eval (CONSTANT e) = (constant e)"
+| "eval (CONSTANT e) = constant e"
 | "eval (INVARIANT i) = invariant i"
 | "eval (TRANSIENT p) = transient p"
 | "eval (p EN q) = ensures p q"                                
