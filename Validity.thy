@@ -7,7 +7,7 @@ subsection \<open>Perpetual Properties\<close>
 text \<open>
   Similar to the language formalisation, we separate the syntax and the semantics of 
   perpetual properties. Below is a @{command datatype} called @{text perpetual} that 
-  represents the syntax.\<^medskip>
+  represents the syntax.
 \<close>
 
 datatype perpetual = 
@@ -79,14 +79,6 @@ lemma semi_assign_path_legit:
 lemma "is_path semi_assign_path semi_assign (\<lambda>v. 0)"
   by (simp add: is_path_def semi_assign_path_legit)
 
-definition action_blocking :: com where
-  "action_blocking \<equiv> \<lbrace>true\<rbrace> ACTION (Assign false x (\<lambda>s. s x + 1))" 
-
-lemma "(action_blocking, s) \<rightarrow> (f', s') \<Longrightarrow> f' = action_blocking"
-  apply (simp add: action_blocking_def)
-  apply (erule ActionE; clarsimp simp: Assign_def true_def false_def)
-  done
-
 fun has_terminated :: "com \<Rightarrow> bool" where
   "has_terminated DONE    = True"
 | "has_terminated ABORTED = True"
@@ -97,7 +89,7 @@ definition path_will_terminate :: "(nat \<Rightarrow> com * state) \<Rightarrow>
   "path_will_terminate path \<equiv> \<exists>i f s. path i = (f, s) \<and> has_terminated f"
 
 text \<open>
-  we include the $post_f$ mentioned in the basis rule. The definition of transient
+  We include the $post_f$ mentioned in the basis rule. The definition of transient
   becomes if @{term p} holds and @{term f} has not terminated, then eventually either @{term "not p"} 
   holds or @{term f} terminates.
 \<close>

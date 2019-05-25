@@ -7,7 +7,7 @@ subsection \<open>State Space\<close>
 text \<open>
   We choose @{text "state"} to be a function from variable names (string) to values (natural 
   number). Boolean expressions, annotations, and invariants are represented as predicates over 
-  states.\<^medskip>
+  states.
 \<close>
 
 type_synonym vname = string
@@ -20,9 +20,7 @@ type_synonym inv = "state \<Rightarrow> bool"
 
 subsection \<open>Syntax\<close>
 
-text \<open>
-  We define the syntax of the language with @{command datatype} @{text com}.\<^medskip>
-\<close>
+text \<open>We define the syntax of the language with @{command datatype} @{text com}.\<close>
 
 type_synonym state_rel = "(state * state) set"
 

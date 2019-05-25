@@ -44,7 +44,7 @@ fun action_state_rel :: "com \<Rightarrow> (ann * state_rel)" where
 | "action_state_rel _ = (true, {})"
 
 text \<open>
-  @{term is_ann_stable} to is a predicate that asserts if an annotation 
+  @{term is_ann_stable} is a predicate that asserts if an annotation 
   or a postcondition is valid upon the execution of actions in a component, i.e. stable.
 \<close>
 definition is_ann_stable :: "ann \<Rightarrow> com \<Rightarrow> bool" where

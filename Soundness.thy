@@ -24,6 +24,7 @@ lemma aborted_star:
   apply (induction rule: star_induct; clarsimp)
   by (simp add: aborted_one_step)
 
+(* if f makes a step to f', the actions of f' is a subset of the actions of f *)
 lemma actions_of_one_step:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); action \<in> actions_of f' \<rbrakk> \<Longrightarrow> action \<in> actions_of f"
   apply (induction rule: small_step_induct; clarsimp)
@@ -100,7 +101,7 @@ lemma if_sound[simp]:
   by (clarsimp simp: valid_spec_def reachable_sat_def if_sound')
 
 text \<open>
-  @{text "exec c n c'"} returns true if c can reach c@{text "'"} by executing small 
+  @{text "exec c n c'"} returns true if @{text c} can reach @{text "c'"} by executing small 
   step (@{text "\<rightarrow>"}) n times, and return false otherwise. This is useful to prove the soundness of
   while loop so that we can do induction on the number of steps.
 \<close>
@@ -172,16 +173,10 @@ lemma while_sounds'':
   apply (induction n arbitrary: s rule: nat_less_induct)
   apply (case_tac n, clarsimp+)
   apply (erule WhileE, simp add: true_def)
-   apply (frule has_terminated_aborted_or_done, erule disjE)
+   apply (frule has_terminated_aborted_or_done, erule disjE; simp)
     apply (clarsimp, drule semi_exec_aborted)
-    apply (erule disjE, blast dest: not_aborted_exec, clarsimp)
-    apply (erule_tac x=s in allE, clarsimp)
-    apply (frule_tac r="com_pre c" and i=i in while_body_invariant, simp_all)
-    apply (blast dest: less_SucI)
-   apply (drule semi_exec_done, clarsimp)
-    apply (erule_tac x=s in allE, clarsimp)
-    apply (frule_tac r="com_pre c" and i=i in while_body_invariant, simp_all)
-   apply (blast dest: less_SucI)
+    apply (meson less_SucI not_aborted_exec while_body_invariant)
+   apply (metis less_SucI semi_exec_done while_body_invariant)
   apply (frule exec_implies_star)
   by (frule_tac i=i and b="local_b" in action_skip_star; simp)
 
@@ -190,18 +185,12 @@ lemma while_semi_sound':
   \<forall>s. (i and b) s \<longrightarrow> com_pre c s; \<Turnstile> {com_pre c} c {{} | i};
   \<forall>s. (not b) s \<longrightarrow> (not local_b) s; \<forall>s. (i and not local_b) s \<longrightarrow> t s; has_terminated f' \<rbrakk> \<Longrightarrow>
   holds t f' s'"
-  apply (frule has_terminated_aborted_or_done, erule disjE)
-   apply (simp, drule semi_exec_aborted, erule disjE)
-    apply (erule_tac x=s in allE)
-    apply (clarsimp, frule not_aborted_exec, simp+)
-   apply clarsimp
-   apply (frule_tac s=s'' in while_sounds'', simp_all)
-   apply (erule_tac x=s in allE, clarsimp)
-   apply (frule_tac r="com_pre c" and i=i in while_body_invariant, simp_all)
+  apply (frule has_terminated_aborted_or_done, erule disjE; simp)
+   apply (drule semi_exec_aborted, erule disjE; clarsimp?)
+  using not_aborted_exec apply blast
+  using has_terminated.simps(2) while_body_invariant while_sounds'' apply blast
   apply (drule semi_exec_done, clarsimp)
-  apply (frule_tac s=s'' in while_sounds'', simp_all)
-  apply (erule_tac x=s in allE, clarsimp)
-  by (frule while_body_invariant, simp_all)
+  using has_terminated.simps(1) while_body_invariant while_sounds'' by blast
 
 lemma while_sound':
   "\<lbrakk> (f, s) \<rightarrow>^n (f', s'); f = \<lbrace>pre\<rbrace> \<lbrace>local_b\<rbrace> WHILE b i DO c;  \<forall>s. pre s \<longrightarrow> i s; 
@@ -209,8 +198,7 @@ lemma while_sound':
   \<forall>s. (not b) s \<longrightarrow> (not local_b) s; \<forall>s. (i and not local_b) s \<longrightarrow> t s; has_terminated f' \<rbrakk> \<Longrightarrow>
   holds t f' s'"
   apply (case_tac n, clarsimp+)
-  apply (erule WhileE, simp)
-   apply (simp add: while_semi_sound')
+  apply (erule WhileE; simp add: while_semi_sound')
   apply (frule exec_implies_star, unfold holds_def)
   by (frule_tac b="local_b" and i=i in action_skip_star; simp)
  
@@ -237,6 +225,7 @@ lemma and_Ts:
   apply (induction Ts, simp add: true_def)
   by fastforce
 
+(* if p is stable in f, and f makes a step to f', then p is stable in f' *)
 lemma is_ann_stable_one_step:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); is_ann_stable p f \<rbrakk> \<Longrightarrow> is_ann_stable p f'"
   apply (unfold is_ann_stable_def)
@@ -330,6 +319,7 @@ lemma com_pre_and_derivable_done_par:
   apply (clarsimp simp: valid_ann_def valid_ann'_def)
   by (frule ann_stable_holds_one_step; simp)
 
+(* a component that goes to DONE satisfies its postcondition *)
 lemma com_pre_and_derivable_done:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); com_pre f s; \<turnstile> {com_pre f} f {t}; f' = DONE \<rbrakk> \<Longrightarrow> t s'"
   apply (induction arbitrary: t rule: small_step_induct; simp)
@@ -378,7 +368,6 @@ lemma par_done_derivable_one_step:
    apply (metis nth_list_update nth_list_update_neq)
   by auto
 
-(* derivability is preserved *)
 lemma com_pre_one_step:
   "\<lbrakk> (c, s) \<rightarrow> (c', s'); com_pre c s; \<turnstile> {com_pre c} c {t} \<rbrakk> \<Longrightarrow> com_pre c' s'"
   apply (induction arbitrary: t rule: small_step_induct; clarsimp simp: true_def)
@@ -441,7 +430,8 @@ lemma par_not_done_derivable_one_step:
     apply (metis Post_annE and_map_com_pre_Ps1 valid_ann_step)
    apply (metis nth_list_update)
   by (metis nth_list_update_eq post_ann_elim)
-  
+
+(* derivability is preserved here. this lemma can't be proved if the rules are not stratified. *)
 lemma com_pre_and_derivable_one_step:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); com_pre f s; \<turnstile> {com_pre f} f {t}; f' \<noteq> DONE \<rbrakk> \<Longrightarrow> 
   (com_pre f') s' \<and> \<turnstile> {com_pre f'} f' {t}"
@@ -481,7 +471,8 @@ lemma par_post_ann_valid_ann:
    apply (simp add: is_com_stable_def is_ann_stable_def)
   by (case_tac "i = ia"; simp add: is_com_stable_def)
 
-lemma parallel_composition_Par_sound:
+(* b_par is sound for the Par (small-step) case *)
+lemma par_Par_sound:
   "\<lbrakk> \<forall>i<length Ts. \<turnstile> {com_pre (Ps ! i)} Ps ! i {Ts ! i} \<or> Ps ! i = \<lbrace>Ts ! i\<rbrace> POSTANN; 
   valid_ann Ps Ts; And (map com_pre Ps) b; length Ps = length Ts;
   Ps' = Ps[i := c']; i < length Ts; (Ps ! i, b) \<rightarrow> (c', s'); c' \<noteq> DONE \<rbrakk> \<Longrightarrow>
@@ -492,7 +483,7 @@ lemma parallel_composition_Par_sound:
    apply (simp add: par_not_done_pre_holds_one_step)
   by (metis Post_annE and_map_com_pre_Ps1 com_pre_and_derivable_one_step nth_list_update)
 
-lemma parallel_composition_sound':
+lemma par_sound':
   "\<lbrakk> (f, s) \<rightarrow>* (f', s'); f = PARALLEL Ps Ts; valid_ann Ps Ts; has_terminated f';
   length Ps = length Ts; (not (=) Ts) []; And (map com_pre Ps) s; 
   \<forall>j<length Ts. \<turnstile> {com_pre (Ps ! j)} Ps ! j {Ts ! j} \<or> Ps ! j = \<lbrace>Ts ! j\<rbrace> POSTANN \<rbrakk> \<Longrightarrow> 
@@ -501,15 +492,15 @@ lemma parallel_composition_sound':
   apply (erule ParE; simp)
     apply (metis (no_types, lifting) ParA Post_annE b_par com.distinct(1) com_pre.simps(7) com_pre_and_derivable_done done_star length_greater_0_conv)
    apply (simp add: par_done_pre_holds_one_step nth_list_update par_post_ann_valid_ann)
-  apply (frule parallel_composition_Par_sound; simp)
+  apply (frule par_Par_sound; simp)
   by blast
 
-lemma parallel_composition_sound[simp]:
+lemma par_sound[simp]:
   "\<lbrakk> valid_ann Ps Ts; length Ps = length Ts; 0 < length Ps; 
   \<forall>i. i < length Ps \<longrightarrow> \<turnstile> {com_pre (Ps!i)} Ps!i {Ts!i} \<or> Ps!i = \<lbrace>Ts!i\<rbrace> POSTANN;
   \<forall>i. i < length Ps \<longrightarrow> \<Turnstile> {com_pre (Ps!i)} Ps!i {{} | Ts!i} \<or> Ps!i = \<lbrace>Ts!i\<rbrace> POSTANN \<rbrakk> \<Longrightarrow>
   \<Turnstile> {And (map com_pre Ps)} PARALLEL Ps Ts {{} | And Ts}"
-  by (clarsimp simp: valid_spec_def holds_def reachable_sat_def parallel_composition_sound')
+  by (clarsimp simp: valid_spec_def holds_def reachable_sat_def par_sound')
 
 
 subsection \<open>Meta Rules\<close>
@@ -542,7 +533,7 @@ subsection \<open>Soundness of @{term biloof_no_perpetual_sound}\<close>
 lemma biloof_no_perpetual_sound[simp]:
   "\<turnstile> {r} f {t} \<Longrightarrow> \<Turnstile> {r} f {{} | t}"
   apply (induction rule: biloof_no_perpetual.induct; clarsimp?)
-  by (metis length_greater_0_conv parallel_composition_sound)
+  by (metis length_greater_0_conv par_sound)
 
 
 subsection \<open>CO\<close>
@@ -663,7 +654,10 @@ lemma invariant_co_sound[simp]:
    apply (meson star_step1 star_trans)
   by fastforce
 
-(* an additional proof but it does not exist in the rules as it is redundant *)
+(* 
+  an additional proof of the semi inheritance rule for invariants. the rule does not 
+  actually exist in biloof as it is redundant.
+*)
 lemma invariant_inheritance_semi[simp]:
   "\<lbrakk> \<turnstile> {r} c\<^sub>1 {com_pre c\<^sub>2}; \<tturnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; \<Turnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; 
   (INVARIANT i) \<in> Q; \<turnstile> {com_pre c\<^sub>2} c\<^sub>2 {t}; \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q' | t}; 
@@ -712,6 +706,7 @@ lemma is_path_one_step:
   apply (simp add: is_path_def)
   by (metis old.prod.exhaust)
 
+(* derivability is preserved or the component is DONE *)
 lemma derivable_one_step:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); \<turnstile> {r} f {t}; r s \<rbrakk> \<Longrightarrow> (\<exists>r' t'. \<turnstile> {r'} f' {t'} \<and> r' s') \<or> f' = DONE"
   apply (case_tac "f' = DONE"; simp)
@@ -728,7 +723,10 @@ lemma derivable_star:
   apply (frule_tac r=r and t=t in derivable_one_step; simp)
   by (metis done_star)
 
-(* if f goes to DONE (and f is not DONE), then it must be an action, num_same_state = 0 *)
+(* 
+  if f goes to DONE (and f is not DONE), then it must be an action or
+  a parallel composition that has one action. therefore, num_same_state = 0 
+*)
 lemma done_0_num_same_state:
   "\<lbrakk> (f, s) \<rightarrow> (f', s'); f' = DONE; \<turnstile> {r} f {t} \<rbrakk> \<Longrightarrow> num_same_state f = 0"
   apply (induction arbitrary: r t rule: small_step_induct; simp)
@@ -888,7 +886,7 @@ lemma one_step_semi:
   "\<lbrakk> (f;;c\<^sub>2, s) \<rightarrow> (f';;c\<^sub>2, s') \<rbrakk> \<Longrightarrow> (f, s) \<rightarrow> (f', s')" 
   by auto
 
-(* if you have always have (f;;c\<^sub>2), it means that c\<^sub>1 never terminates *)
+(* if you always have (f;;c\<^sub>2), it means that c\<^sub>1 never terminates *)
 lemma construct_path_from_semi_never_terminated:
   "\<lbrakk> is_path path (c\<^sub>1;;c\<^sub>2) s; (\<forall>i. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<rbrakk> \<Longrightarrow>
   is_path (\<lambda>i. case path i of (c\<^sub>1';;c\<^sub>2, s) \<Rightarrow> (c\<^sub>1', s)) c\<^sub>1 s"
@@ -914,9 +912,9 @@ lemma semi_path_all_possible_cases':
 
 (* 
   the path for sequential composition is either
-  - path i = (f';;c\<^sub>2, s) for all i -- c\<^sub>1 never terminates
-  - path i = (ABORTED;;c\<^sub>2, s) and path (Suc i) = (ABORTED, s) -- c\<^sub>1 goes to ABORTED
-  - path i = (f';;c\<^sub>2, s) and path (Suc i) = (c\<^sub>2, s') -- c\<^sub>2 goes to DONE
+  - path i = (f';;c\<^sub>2, s) for all i ---- c\<^sub>1 never terminates
+  - path i = (ABORTED;;c\<^sub>2, s) and path (Suc i) = (ABORTED, s) --- c\<^sub>1 goes to ABORTED
+  - path i = (f';;c\<^sub>2, s) and path (Suc i) = (c\<^sub>2, s') ---- c\<^sub>2 goes to DONE
 *)
 lemma semi_path_all_possible_cases:
   "\<lbrakk> is_path path (c\<^sub>1;;c\<^sub>2) s; \<not> (\<forall>i. \<exists>f s. path i = (f;;c\<^sub>2, s)) \<rbrakk> \<Longrightarrow>
@@ -993,6 +991,7 @@ lemma pre_snd_com':
   apply (simp add: valid_spec_def reachable_sat_def holds_def)
   by (meson has_terminated.simps(1) star.refl star.step star_trans)
 
+(* in sequential composition, once the first component is DONE, the postcondition holds *)
 lemma pre_snd_com:
   "\<lbrakk> \<Turnstile> {r} c\<^sub>1 {Q | t}; r s; is_path path (c\<^sub>1;;c\<^sub>2) s; 
   \<forall>i<n. \<exists>f s. path i = (f;;c\<^sub>2, s); n > 0; path n = (c\<^sub>2, s'); c\<^sub>2 \<noteq> ABORTED \<rbrakk> \<Longrightarrow>
@@ -1006,6 +1005,7 @@ lemma pre_snd_com:
   apply (erule_tac x=s in allE; simp add: reachable_sat_def)
   by (metis Suc_pred one_step_semi_done pre_snd_com')
 
+(* if all the paths of c\<^sub>1 terminate, then (c\<^sub>1;;c\<^sub>2, s) will get to (c\<^sub>2, s') *)
 lemma always_terminate_path:
   "\<lbrakk> \<turnstile> {r} c\<^sub>1;;c\<^sub>2 {t}; r s; is_path path (c\<^sub>1;;c\<^sub>2) s; 
   \<forall>path. is_path path c\<^sub>1 s \<longrightarrow> path_will_terminate path \<rbrakk> \<Longrightarrow>
@@ -1137,7 +1137,7 @@ lemma transient_inheritance_if_sound[simp]:
 
 subsection \<open>ENSURES\<close>
 
-lemma co_path'':
+lemma ensures_eventually_q_or_terminated'':
   "\<lbrakk> co (p and not q) (p or q) f s; is_path path f s; path (Suc j) = (f', s'); i \<le> j;
   (not p) s'; path j = (fb, sb); p sb; (not q) sb; (not has_terminated) fb \<rbrakk> \<Longrightarrow> 
   \<exists>j\<ge>i. \<exists>f' s'. path j = (f', s') \<and> (p s' \<and> has_terminated f' \<or> q s')"
@@ -1149,7 +1149,7 @@ lemma co_path'':
   apply (clarsimp simp: is_path_def)
   by (metis le_SucI)
 
-lemma co_path':
+lemma ensures_eventually_q_or_terminated':
   "\<lbrakk> co (p and not q) (p or q) f s; is_path path f s; path i = (fa, sa); p sa; (not q) sa; 
   (not has_terminated) fa; i \<le> j; path j = (f', s'); (not p) s' \<rbrakk> \<Longrightarrow> 
   \<exists>j\<ge>i. \<exists>f' s'. path j = (f', s') \<and> (p s' \<and> has_terminated f' \<or> q s')"
@@ -1161,10 +1161,10 @@ lemma co_path':
    apply (case_tac "p sb"; simp)
    apply (case_tac "q sb", blast)
    apply (case_tac "has_terminated fb", blast)
-   apply (simp add: co_path'')
+   apply (simp add: ensures_eventually_q_or_terminated'')
   by simp
 
-lemma co_path:
+lemma ensures_eventually_q_or_terminated:
   "\<lbrakk> co (p and not q) (p or q) f s; transient (p and not q) f s; path \<in> paths f s; 
   path i = (fa, sa); p sa \<rbrakk> \<Longrightarrow> 
   \<exists>j\<ge>i. \<exists>f' s'. path j = (f', s') \<and> (p s' \<and> has_terminated f' \<or> q s')"
@@ -1175,9 +1175,9 @@ lemma co_path:
   apply (case_tac "has_terminated fa", blast)
   apply clarsimp
   apply (case_tac "p s'", blast)
-  by (simp add: co_path')
+  by (simp add: ensures_eventually_q_or_terminated')
 
-lemma transient_path:
+lemma ensures_next_step_p_or_q:
   "\<lbrakk> co (p and not q) (p or q) f s; transient (p and not q) f s; path \<in> paths f s; 
   path i = (fa, sa); p sa; (not q) sa \<rbrakk> \<Longrightarrow> 
   \<exists>f' s'. path (Suc i) = (f', s') \<and> (p or q) s'"
@@ -1196,7 +1196,7 @@ lemma transient_path:
 lemma co_transient_implies_ensures:
   "\<lbrakk> co (p and not q) (p or q) f s; transient (p and not q) f s \<rbrakk> \<Longrightarrow> 
   ensures p q f s"
-  by (clarsimp simp: ensures_def transient_path co_path)
+  by (clarsimp simp: ensures_def ensures_next_step_p_or_q ensures_eventually_q_or_terminated)
 
 lemma ensures_sound[simp]:
   "\<lbrakk> \<Turnstile> {r} f {Q | t}; (p and not q CO p or q) \<in> Q; (TRANSIENT p and not q) \<in> Q \<rbrakk> \<Longrightarrow> 

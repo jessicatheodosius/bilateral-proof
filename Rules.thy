@@ -8,9 +8,9 @@ text \<open>
   that mention perpetual properties as well as the rules from the first layer.
 \<close>
 
-subsection \<open>First layer: @{term biloof_no_perpetual}\<close>
+subsection \<open>First Layer: @{term biloof_no_perpetual}\<close>
 
-inductive biloof_no_perpetual:: "ann \<Rightarrow> com \<Rightarrow> ann \<Rightarrow> bool" ("\<turnstile> {_} _ {_}"(*<*) [0, 0, 0] 61(*>*)) where
+inductive biloof_no_perpetual:: "ann \<Rightarrow> com \<Rightarrow> ann \<Rightarrow> bool" ("\<turnstile> {_} _ {_}" [0, 0, 0] 61) where
   b_action[intro]: 
   "\<lbrakk> \<forall>s s'. (s, s') \<in> state_rel \<and> pre s \<longrightarrow> t s' \<rbrakk> \<Longrightarrow>
   \<turnstile> {pre} \<lbrace>pre\<rbrace> ACTION state_rel {t}"
@@ -44,13 +44,13 @@ inductive biloof_no_perpetual:: "ann \<Rightarrow> com \<Rightarrow> ann \<Right
   "\<lbrakk> \<turnstile> {r} f {t}; \<turnstile> {r'} f {t'} \<rbrakk> \<Longrightarrow> \<turnstile> {r or r'} f {t or t'}"
 
 
-subsection \<open>Second layer: @{term biloof}\<close>
+subsection \<open>Second Layer: @{term biloof}\<close>
 
 primrec Or :: "ann list \<Rightarrow> ann" where
   "Or [] = false"
 | "Or (p # ps) = (p or Or ps)"
 
-inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarrow> ann \<Rightarrow> bool" ("\<tturnstile> {_} _ {_ | _}"(*<*) [0, 0, 0, 0] 61(*>*)) where
+inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarrow> ann \<Rightarrow> bool" ("\<tturnstile> {_} _ {_ | _}" [0, 0, 0, 0] 61) where
   bl_biloof_no_perpetual:
   "\<turnstile> {r} f {t} \<Longrightarrow> \<tturnstile> {r} f {{} | t}"
 

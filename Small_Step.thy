@@ -50,7 +50,7 @@ inductive small_step :: "com \<times> state \<Rightarrow> com \<times> state \<R
            Ps!i = c; (c, s) \<rightarrow> (DONE, s'); com_pre (PARALLEL Ps Ts) s \<rbrakk> \<Longrightarrow> 
            (PARALLEL Ps Ts, s) \<rightarrow> (DONE, s')"
 
-| ParD:    "\<lbrakk>i < length Ps;  \<exists>j<length Ps. j \<noteq> i \<and> Ps!j \<noteq> \<lbrace>Ts!j\<rbrace> POSTANN;
+| ParD:    "\<lbrakk> i < length Ps;  \<exists>j<length Ps. j \<noteq> i \<and> Ps!j \<noteq> \<lbrace>Ts!j\<rbrace> POSTANN;
            Ps!i = c; (c, s) \<rightarrow> (DONE, s'); Ps' = Ps[i:=(\<lbrace>Ts!i\<rbrace> POSTANN)];
            com_pre (PARALLEL Ps Ts) s \<rbrakk> \<Longrightarrow> 
            (PARALLEL Ps Ts, s) \<rightarrow> (PARALLEL Ps' Ts, s')"
@@ -160,6 +160,16 @@ lemma dist_ctr_single_step:
     , s(old := 0, new := 0))"
   by (auto simp: Action Semi1 Semi2 true_def dist_ctr_com_def Assign_def Let_def
      intro: small_step.intros)
+
+
+text \<open>Blocking action\<close>
+
+definition blocking_action :: com where
+  "blocking_action \<equiv> \<lbrace>true\<rbrace> ACTION (Assign false x (\<lambda>s. s x + 1))" 
+
+lemma "(blocking_action, s) \<rightarrow> (f', s') \<Longrightarrow> f' = blocking_action"
+  apply (simp add: blocking_action_def)
+  by (erule ActionE; clarsimp simp: Assign_def true_def false_def)
 
 
 text \<open>Parallel execution of @{text "x := x + 1 || x := x + 2 || x := x + 3"}:\<close>

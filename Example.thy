@@ -57,11 +57,13 @@ lemma dist_ctr_com2_derivable:
 
 lemma is_com_stable_dist_ctr_com12:
   "is_com_stable dist_ctr_com1 dist_ctr_com2"
-  by (auto simp: is_com_stable_def is_ann_stable_def dist_ctr_com1_def dist_ctr_com2_def dist_ctr_com_def true_def Assign_def)
+  by (auto simp: is_com_stable_def is_ann_stable_def dist_ctr_com1_def dist_ctr_com2_def 
+      dist_ctr_com_def true_def Assign_def)
 
 lemma is_com_stable_dist_ctr_com21:
   "is_com_stable dist_ctr_com2 dist_ctr_com1"
-  by (auto simp: is_com_stable_def is_ann_stable_def dist_ctr_com1_def dist_ctr_com2_def dist_ctr_com_def true_def Assign_def)
+  by (auto simp: is_com_stable_def is_ann_stable_def dist_ctr_com1_def dist_ctr_com2_def 
+      dist_ctr_com_def true_def Assign_def)
 
 lemma is_ann_stable_true:
   "is_ann_stable true f"
@@ -69,8 +71,7 @@ lemma is_ann_stable_true:
 
 lemma valid_ann_dist_ctr_com:
   "valid_ann [dist_ctr_com1, dist_ctr_com2] [true, true]"
-  apply (simp add: valid_ann_def valid_ann'_def)
-  apply clarsimp
+  apply (clarsimp simp: valid_ann_def valid_ann'_def)
   apply (case_tac i; simp add: is_ann_stable_true)
    apply (simp add: is_com_stable_dist_ctr_com12)
   apply (case_tac j; simp)
