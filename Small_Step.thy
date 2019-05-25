@@ -72,7 +72,7 @@ inductive_cases
   Post_annE[elim]: "(\<lbrace>pre\<rbrace> POSTANN, s) \<rightarrow> ct"
 
 abbreviation
-  small_steps_star :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
+  small_steps_star :: "com \<times> state \<Rightarrow> com \<times> state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where 
   "x \<rightarrow>* y \<equiv> star small_step x y"
 

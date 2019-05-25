@@ -71,9 +71,8 @@ inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarr
   \<tturnstile> {r} f {Q \<union> {p CO q} | t}"
 
 | b_co_inheritance_semi:
-  "\<lbrakk> \<turnstile> {r} c\<^sub>1 {com_pre c\<^sub>2}; \<turnstile> {com_pre c\<^sub>2} c\<^sub>2 {t}; 
-  \<tturnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; (p CO q) \<in> Q; 
-  \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q'| t}; (p CO q) \<in> Q' \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> \<turnstile> {r} c\<^sub>1 {com_pre c\<^sub>2}; \<turnstile> {com_pre c\<^sub>2} c\<^sub>2 {t}; \<tturnstile> {r} c\<^sub>1 {Q | com_pre c\<^sub>2}; 
+  (p CO q) \<in> Q; \<tturnstile> {com_pre c\<^sub>2} c\<^sub>2 {Q'| t}; (p CO q) \<in> Q' \<rbrakk> \<Longrightarrow> 
   \<tturnstile> {r} c\<^sub>1;;c\<^sub>2 {{p CO q} | t}"
 
 | b_co_inheritance_if:
@@ -90,9 +89,9 @@ inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarr
 
 | b_co_inheritance_parallel:
   "\<lbrakk> valid_ann Ps Ts; length Ps = length Ts; length Ts = length Qs; 
-  length Ps > 0; \<forall>i. i < length Ps \<longrightarrow> \<turnstile> {com_pre (Ps!i)} Ps!i {Ts!i}; 
-  \<forall>i. i < length Ps \<longrightarrow> \<tturnstile> {com_pre (Ps!i)} Ps!i {Qs!i | Ts!i}; 
-  \<forall>i. i < length Qs \<longrightarrow> (p CO q) \<in> (Qs!i) \<rbrakk>
+  length Ps > 0; \<forall>i<length Ps. \<turnstile> {com_pre (Ps!i)} Ps!i {Ts!i}; 
+  \<forall>i<length Ps. \<tturnstile> {com_pre (Ps!i)} Ps!i {Qs!i | Ts!i}; 
+  \<forall>i<length Qs. (p CO q) \<in> (Qs!i) \<rbrakk>
   \<Longrightarrow> \<tturnstile> {com_pre (PARALLEL Ps Ts)} PARALLEL Ps Ts {{p CO q} | And Ts}"
 
 | b_invariant:

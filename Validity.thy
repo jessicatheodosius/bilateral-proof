@@ -54,15 +54,15 @@ text \<open>
   @{term "is_path P f s"} is true iff @{term P} is a valid path that starts from
   @{term "(f, s)"}. Here, paths are functions from indices (natural number) to configurations.
 \<close>
-definition is_path :: "(nat \<Rightarrow> com * state) \<Rightarrow> com \<Rightarrow> state \<Rightarrow> bool" where
+definition is_path :: "(nat \<Rightarrow> com \<times> state) \<Rightarrow> com \<Rightarrow> state \<Rightarrow> bool" where
   "is_path P f s \<equiv> P 0 = (f, s) \<and> (\<forall>n. P n \<rightarrow> P (n + 1))"
 
-definition paths :: "com \<Rightarrow> state \<Rightarrow> (nat \<Rightarrow> com * state) set" where
+definition paths :: "com \<Rightarrow> state \<Rightarrow> (nat \<Rightarrow> com \<times> state) set" where
   "paths f s = {P. is_path P f s}"
 
 
 text \<open>Example of a path for semi\_assign (defined in Small\_Step)\<close>
-fun semi_assign_path :: "nat \<Rightarrow> com * state" where
+fun semi_assign_path :: "nat \<Rightarrow> com \<times> state" where
   "semi_assign_path 0 = (semi_assign, \<lambda>v. 0)"
 | "semi_assign_path (Suc 0) = (semi_assign_sub, (\<lambda>v. 0)(x := 1))"
 | "semi_assign_path _ = (DONE, (\<lambda>v. 0)(x := 1, y := 3))"
@@ -85,7 +85,7 @@ fun has_terminated :: "com \<Rightarrow> bool" where
 | "has_terminated _       = False"
 
 text \<open>A predicate over paths, is true if the execution in the path terminates\<close>
-definition path_will_terminate :: "(nat \<Rightarrow> com * state) \<Rightarrow> bool" where
+definition path_will_terminate :: "(nat \<Rightarrow> com \<times> state) \<Rightarrow> bool" where
   "path_will_terminate path \<equiv> \<exists>i f s. path i = (f, s) \<and> has_terminated f"
 
 text \<open>

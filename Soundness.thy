@@ -105,7 +105,7 @@ text \<open>
   step (@{text "\<rightarrow>"}) n times, and return false otherwise. This is useful to prove the soundness of
   while loop so that we can do induction on the number of steps.
 \<close>
-primrec exec :: "(com * state) \<Rightarrow> nat \<Rightarrow> (com * state) \<Rightarrow> bool"  ("_ \<rightarrow>^_ _" [55, 1000, 55] 55)
+primrec exec :: "(com \<times> state) \<Rightarrow> nat \<Rightarrow> (com \<times> state) \<Rightarrow> bool"  ("_ \<rightarrow>^_ _" [55, 1000, 55] 55)
   where
   "c \<rightarrow>^0 c' = (c = c')"
 | "c \<rightarrow>^(Suc n) c' = (\<exists>c''. c \<rightarrow> c'' \<and> c'' \<rightarrow>^n c')"
@@ -1250,9 +1250,7 @@ lemma leads_to_disjunction_sound[simp]:
   apply (erule_tac x=s in allE; clarsimp)
   apply (subgoal_tac "\<forall>p\<in>set S. leads_to p q f s")
    apply (simp add: leads_to_disjunction')
-  apply fastforce
-  done
-
+  by fastforce
 
 subsection \<open>Soundness of Everything\<close>
 

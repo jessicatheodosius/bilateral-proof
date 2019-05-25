@@ -22,7 +22,7 @@ subsection \<open>Syntax\<close>
 
 text \<open>We define the syntax of the language with @{command datatype} @{text com}.\<close>
 
-type_synonym state_rel = "(state * state) set"
+type_synonym state_rel = "(state \<times> state) set"
 
 datatype com = 
     DONE
