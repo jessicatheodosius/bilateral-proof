@@ -55,7 +55,7 @@ inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarr
   "\<turnstile> {r} f {t} \<Longrightarrow> \<tturnstile> {r} f {{} | t}"
 
 | bl_strengthen_weaken:
-  "\<lbrakk> \<tturnstile> {r} f {Q | t}; \<forall>s. r' s \<longrightarrow> r s; Q' \<subseteq> Q; \<forall>s. t s \<longrightarrow> t' s  \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> \<tturnstile> {r} f {Q | t}; \<forall>s. r' s \<longrightarrow> r s; Q' \<subseteq> Q; \<forall>s. t s \<longrightarrow> t' s \<rbrakk> \<Longrightarrow>
   \<tturnstile> {r'} f {Q' | t'}"
 
 | bl_conjunction:
@@ -91,14 +91,14 @@ inductive biloof:: "ann \<Rightarrow> com \<Rightarrow> perpetual set \<Rightarr
   "\<lbrakk> valid_ann Ps Ts; length Ps = length Ts; length Ts = length Qs; 
   length Ps > 0; \<forall>i<length Ps. \<turnstile> {com_pre (Ps!i)} Ps!i {Ts!i}; 
   \<forall>i<length Ps. \<tturnstile> {com_pre (Ps!i)} Ps!i {Qs!i | Ts!i}; 
-  \<forall>i<length Qs. (p CO q) \<in> (Qs!i) \<rbrakk>
-  \<Longrightarrow> \<tturnstile> {com_pre (PARALLEL Ps Ts)} PARALLEL Ps Ts {{p CO q} | And Ts}"
+  \<forall>i<length Qs. (p CO q) \<in> (Qs!i) \<rbrakk> \<Longrightarrow> 
+  \<tturnstile> {com_pre (PARALLEL Ps Ts)} PARALLEL Ps Ts {{p CO q} | And Ts}"
 
 | b_invariant:
   "\<lbrakk> \<tturnstile> {r} f {Q | t}; \<forall>s. r s \<longrightarrow> i s;
   \<forall>a pre state_rel. a \<in> actions_of f \<longrightarrow> (pre, state_rel) = action_state_rel a
   \<longrightarrow> (\<forall>s s'. (s, s') \<in> state_rel \<longrightarrow> (pre and i) s \<longrightarrow> i s') \<rbrakk> \<Longrightarrow>
-   \<tturnstile> {r} f {Q \<union> {INVARIANT i} | t}"
+  \<tturnstile> {r} f {Q \<union> {INVARIANT i} | t}"
 
 | b_invariant_pre_post:
   "\<lbrakk> \<tturnstile> {r} f {Q | t}; (INVARIANT i) \<in> Q \<rbrakk> \<Longrightarrow> \<tturnstile> {r and i} f {Q | t and i}"
